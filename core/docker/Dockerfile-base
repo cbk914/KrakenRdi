@@ -48,11 +48,11 @@ FROM debian:${VERSION} AS base
 	########################################
 	#	CONFIGURATION AND SYSTEM VARIABLES
 	########################################
-	ARG TOR_LATEST_VERSION=0.4.2.7
+	ARG TOR_LATEST_VERSION=0.4.7.7
 	ARG USERNAME=krakenrdi
 	ARG PASSWORD=krakenrdi
 	ARG EXPOSE_PORTS="22 80 443 3306 5432 8080 8081 8000"
-	ARG RUBY_VERSION=2.6.6
+	ARG RUBY_VERSION=3.0.0
 	ARG RVM_DIR=/usr/local/rvm/
 	ARG RVM_LOADER=/etc/profile.d/rvm.sh
 	ARG POSTGRES_PASSWORD=postgres
@@ -80,13 +80,13 @@ FROM debian:${VERSION} AS base
 	#	GLOBAL VARIABLES FROM ANON IMAGE
 	########################################
 	ARG ANON_TOR_SOURCE=False
-	ARG ANON_TOR_APT=False	
+	ARG ANON_TOR_APT=False
 	ARG ANON_TORBROWSER=False
 	ARG ANON_TORSOCKS=False
 	ARG ANON_PROXYCHAINS=False
 
 	ENV ANON_TOR_SOURCE $ANON_TOR_SOURCE
-	ENV ANON_TOR_APT $ANON_TOR_APT	
+	ENV ANON_TOR_APT $ANON_TOR_APT
 	ENV ANON_TORBROWSER $ANON_TORBROWSER
 	ENV ANON_TORSOCKS $ANON_TORSOCKS
 	ENV ANON_PROXYCHAINS $ANON_PROXYCHAINS
@@ -97,24 +97,24 @@ FROM debian:${VERSION} AS base
 	ARG RECON_RECONNG=False
 	ARG RECON_PHOTON=False
 	ARG RECON_THEHARVESTER=False
-	ARG RECON_SKIPTRACER=False
 	ARG RECON_METAGOOFIL=False
-	ARG RECON_JUSTMETADATA=False
 	ARG RECON_SPIDERFOOT=False
 	ARG RECON_MALTEGO=False
 	ARG RECON_PHONEINFOGA=False
 	ARG RECON_NMAP=False
+	ARG RECON_SHERLOCK=True
+
 
 	ENV RECON_RECONNG $RECON_RECONNG
 	ENV RECON_PHOTON $RECON_PHOTON
 	ENV RECON_THEHARVESTER $RECON_THEHARVESTER
-	ENV RECON_SKIPTRACER $RECON_SKIPTRACER
 	ENV RECON_METAGOOFIL $RECON_METAGOOFIL
-	ENV RECON_JUSTMETADATA $RECON_JUSTMETADATA
 	ENV RECON_SPIDERFOOT $RECON_SPIDERFOOT
 	ENV RECON_MALTEGO $RECON_MALTEGO
 	ENV RECON_PHONEINFOGA $RECON_PHONEINFOGA
 	ENV RECON_NMAP $RECON_NMAP
+	ENV RECON_SHERLOCK $RECON_SHERLOCK 
+
 
 	########################################
 	#	GLOBAL VARIABLES FROM WEAPON IMAGE
@@ -129,6 +129,7 @@ FROM debian:${VERSION} AS base
 	ARG WEAPON_DONTKILLMYCAT=False
 	ARG WEAPON_EMBEDINHTML=False
 	ARG WEAPON_MACRO_PACK=False
+	ARG WEAPON_NTLM_THEFT=True
 
 	ENV WEAPON_CVE2018_20250 $WEAPON_CVE2018_20250
 	ENV WEAPON_CVE2017_8759 $WEAPON_CVE2017_8759
@@ -140,6 +141,7 @@ FROM debian:${VERSION} AS base
 	ENV WEAPON_DONTKILLMYCAT $WEAPON_DONTKILLMYCAT
 	ENV WEAPON_EMBEDINHTML $WEAPON_EMBEDINHTML
 	ENV WEAPON_MACRO_PACK $WEAPON_MACRO_PACK
+	ENV WEAPON_NTLM_THEFT $WEAPON_NTLM_THEFT
 
 	########################################
 	#	GLOBAL VARIABLES FROM WEAPON IMAGE
@@ -157,12 +159,15 @@ FROM debian:${VERSION} AS base
 	ARG EXPLOITATION_CRACKMAPEXEC=False
 	ARG EXPLOITATION_IMPACKET=False
 	ARG EXPLOITATION_POWERSHELL=False
+	ARG EXPLOITATION_SMBMAP=False
+
 
 	ENV EXPLOITATION_BURP $EXPLOITATION_BURP
 	ENV EXPLOITATION_ZAP $EXPLOITATION_ZAP
 	ENV EXPLOITATION_CRACKMAPEXEC $EXPLOITATION_CRACKMAPEXEC
 	ENV EXPLOITATION_IMPACKET $EXPLOITATION_IMPACKET
 	ENV EXPLOITATION_POWERSHELL $EXPLOITATION_POWERSHELL
+	ENV EXPLOITATION_SMBMAP $EXPLOITATION_SMBMAP
 
 
 	########################################
@@ -225,14 +230,18 @@ FROM debian:${VERSION} AS base
 	ARG COMMON_POSTMAN=False
 	ARG COMMON_FUZZDB=False
 	ARG COMMON_DIRBUSTER=False
+	ARG COMMON_SSLH=False
 	ARG COMMON_HASHIDENTIFIER=False
+	ARG WEAPON_CVE2022_30190=True
 
 	ENV COMMON_THC_HYDRA $COMMON_THC_HYDRA
 	ENV COMMON_CWEL $COMMON_CWEL
 	ENV COMMON_POSTMAN $COMMON_POSTMAN
 	ENV COMMON_FUZZDB $COMMON_FUZZDB
 	ENV COMMON_DIRBUSTER $COMMON_DIRBUSTER
+	ENV COMMON_SSLH=$COMMON_SSLH
 	ENV COMMON_HASHIDENTIFIER $COMMON_HASHIDENTIFIER
+	ENV WEAPON_CVE2022_30190 $WEAPON_CVE2022_30190
 
 	########################################
 	#	BASE SOFTWARE INSTALLATION
@@ -245,8 +254,8 @@ FROM debian:${VERSION} AS base
 		libevent-dev libssl-dev zlib1g zlib1g-dev \
 		firefox-esr xfce4-terminal \
 		autoconf automake libtool apt-utils \
-		openssh-server openssl \
-		build-essential libpcap-dev libpq-dev libsqlite3-dev libsqlite3-0 \
+		openssh-server openssl libgbm-dev \
+		build-essential libpcap-dev libpq-dev libsqlite3-dev libconfig-dev libwrap0-dev libsystemd-dev \ 
 		software-properties-common sudo locate \
 		&& useradd -m ${USERNAME} \
 		&& echo "${USERNAME}:${PASSWORD}" | chpasswd \
@@ -309,7 +318,7 @@ FROM base AS kraken-anon
 	COPY data/README-anon.txt ${WORKDIR_ANON}
 	COPY data/torrc ${WORKDIR_ANON}
 
-	RUN if [ "$ANON_TORBROWSER" = "True" ] ; then wget https://www.torproject.org/dist/torbrowser/9.0.9/tor-browser-linux64-9.0.9_en-US.tar.xz && tar -xvf tor-browser-linux64-9.0.9_en-US.tar.xz && rm -rf tor-browser-linux64-9.0.9_en-US.tar.xz; fi ; \
+	RUN if [ "$ANON_TORBROWSER" = "True" ] ; then wget https://www.torproject.org/dist/torbrowser/11.0.11/tor-browser-linux64-11.0.11_en-US.tar.xz && tar -xvf tor-browser-linux64-11.0.11_en-US.tar.xz && rm -rf tor-browser-linux64-11.0.11_en-US.tar.xz; fi ; \
 		if [ "$ANON_TOR_SOURCE" = "True" ] ; then wget https://dist.torproject.org/tor-${TOR_LATEST_VERSION}.tar.gz && tar -xvf tor-${TOR_LATEST_VERSION}.tar.gz && rm -rf tor-${TOR_LATEST_VERSION}.tar.gz && mv tor-${TOR_LATEST_VERSION} tor-latest; fi ; 
 
 
@@ -318,15 +327,15 @@ FROM base AS kraken-anon
 # DESCRIPTION:																									  
 # Include the tools for the Intelligence gathering stage.						 								  
 # TOOLS:																										  
-#	[^]	Recon-ng: https://github.com/lanmaster53/recon-ng 														  
-#	[^] Photon: https://github.com/s0md3v/Photon  																  
-#	[^] skiptracer: https://github.com/xillwillx/skiptracer	        											  
-#	[^] theHarvester: https://github.com/laramies/theHarvester 													  
-#	[^] metagoofil: https://github.com/laramies/metagoofil 														  
-#	[^] JustMetadata: https://github.com/FortyNorthSecurity/Just-Metadata 										  	
-#	[^] Maltego: https://www.paterva.com/web7/downloads.php 														  
-#	[^] Spiderfoot: https://github.com/smicallef/spiderfoot
-#	[^] Nmap: https://github.com/nmap/nmap.git								  
+#	[^]	Recon-ng: https://github.com/lanmaster53/recon-ng
+#	[^] Photon: https://github.com/s0md3v/Photon
+#	[^] theHarvester: https://github.com/laramies/theHarvester
+#	[^] metagoofil: https://github.com/laramies/metagoofil
+#	[^] Maltego: https://www.paterva.com/web7/downloads.php 			#	[^] Spiderfoot: https://github.com/smicallef/spiderfoot
+#	[^] Nmap: https://github.com/nmap/nmap.git
+#	[^] Sherlock: https://github.com/sherlock-project/sherlock.git
+#	[^] PhoneInfoga: https://github.com/sundowndev/phoneinfoga/
+
 ###################################################################################################################
 FROM base AS kraken-recon
 	LABEL author="Adastra"
@@ -339,12 +348,11 @@ FROM base AS kraken-recon
 	RUN if [ "$RECON_RECONNG" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/lanmaster53/recon-ng.git ; fi ; \
 		if [ "$RECON_PHOTON" = "True" ] ; then cd ${WORKDIR_RECON} &&  git clone https://github.com/s0md3v/Photon ; fi ; \
 		if [ "$RECON_THEHARVESTER" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/laramies/theHarvester ; fi ; \
-		if [ "$RECON_SKIPTRACER" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/xillwillx/skiptracer.git ; fi ; \
 		if [ "$RECON_METAGOOFIL" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/laramies/metagoofil ; fi ; \
-		if [ "$RECON_JUSTMETADATA" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/FortyNorthSecurity/Just-Metadata.git && cd Just-Metadata/setup && ./setup.sh ; fi ; \
 		if [ "$RECON_SPIDERFOOT" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/smicallef/spiderfoot.git ; fi ; \
-		if [ "$RECON_MALTEGO" = "True" ] ; then cd ${WORKDIR_RECON} && mkdir maltego && cd maltego && wget https://maltego-downloads.s3.us-east-2.amazonaws.com/linux/Maltego.v4.2.9.12898.linux.zip && unzip Maltego.v4.2.9.12898.linux.zip ; fi ; \
+		if [ "$RECON_MALTEGO" = "True" ] ; then cd ${WORKDIR_RECON} && mkdir maltego && cd maltego && wget https://maltego-downloads.s3.us-east-2.amazonaws.com/linux/Maltego.v4.3.0.linux.zip && unzip Maltego.v4.3.0.linux.zip ; fi ; \
 		if [ "$RECON_PHONEINFOGA" = "True" ] ; then cd ${WORKDIR_RECON} && mkdir phoneinfoga && cd phoneinfoga && curl -L "https://github.com/sundowndev/phoneinfoga/releases/download/v2.0.5/phoneinfoga_$(uname -s)_$(uname -m).tar.gz" -o phoneinfoga.tar.gz && tar xvf phoneinfoga.tar.gz && rm -rf phoneinfoga.tar.gz; fi ; \
+		if [ "$RECON_SHERLOCK" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/sherlock-project/sherlock ; fi ; \	
 		if [ "$RECON_NMAP" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/nmap/nmap.git; fi
 
 ###################################################################################################################
@@ -357,7 +365,15 @@ FROM base AS kraken-recon
 #	[^] CVE-2017-8570: https://github.com/rxwx/CVE-2017-8570
 #	[^] CVE-2017-0199: https://github.com/bhdresh/CVE-2017-0199
 #	[^] Demiguise: https://github.com/nccgroup/demiguise
-#	[^] EmbedInHTML; https://github.com/Arno0x/EmbedInHTML
+#	[^] Demiguise: https://github.com/nccgroup/demiguise
+#	[^] MaliciousMacroGenerator: https://github.com/Mr-Un1k0d3r/MaliciousMacroGenerator
+#	[^] Office DDE Payloads: https://github.com/0xdeadbeefJERKY/Office-DDE-Payloads
+#	[^] Dont Kill My Cat: https://github.com/Mr-Un1k0d3r/DKMC
+#	[^] EmbedInHTML: https://github.com/Arno0x/EmbedInHTML
+#	[^] NTLM_Theft: https://github.com/Greenwolf/ntlm_theft
+#	[^] Macro_Pack: https://github.com/sevagas/macro_pack/releases/
+#	[^] CVE-2022-30190: https://github.com/chvancooten/follina.py
+
 ###################################################################################################################
 FROM base AS kraken-weapon
 	LABEL author="Adastra"
@@ -376,7 +392,9 @@ FROM base AS kraken-weapon
 		if [ "$WEAPON_OFFICEDDEPAYLOADS" = "True" ] ; then cd ${WORKDIR_WEAPON} && git clone https://github.com/0xdeadbeefJERKY/Office-DDE-Payloads && cd Office-DDE-Payloads && pip install -r requirements.txt; fi ; \
 		if [ "$WEAPON_DONTKILLMYCAT" = "True" ] ; then cd ${WORKDIR_WEAPON} && git clone https://github.com/Mr-Un1k0d3r/DKMC && cd DKMC && mkdir output; fi ; \
 		if [ "$WEAPON_EMBEDINHTML" = "True" ] ; then cd ${WORKDIR_WEAPON} && git clone https://github.com/Arno0x/EmbedInHTML; fi ; \
-		if [ "$WEAPON_MACRO_PACK" = "True" ] ; then cd ${WORKDIR_WEAPON} && mkdir macro_pack && cd macro_pack && wget https://github.com/sevagas/macro_pack/releases/download/v1.7/macro_pack.exe; fi
+		if [ "$WEAPON_NTLM_THEFT" = "True" ] ; then cd ${WORKDIR_WEAPON} && git clone https://github.com/Greenwolf/ntlm_theft && pip3 install xlsxwriter; fi ; \
+		if [ "$WEAPON_MACRO_PACK" = "True" ] ; then cd ${WORKDIR_WEAPON} && mkdir macro_pack && cd macro_pack && wget https://github.com/sevagas/macro_pack/releases/download/v1.7/macro_pack.exe; fi ; \
+		if [ "$WEAPON_CVE2022_30190" = "True" ] ; then cd ${WORKDIR_WEAPON} && git clone https://github.com/chvancooten/follina.py CVE2022_30190; fi
 
 ###################################################################################################################
 # DELIVERY IMAGE 																							          
@@ -399,10 +417,12 @@ FROM base AS kraken-delivery
 # Include the tools for the compromise stage.						 								  
 # TOOLS:
 #	[^] Burp: https://portswigger.net/burp
-#	[^] ZAP: https://github.com/zaproxy/zaproxy/releases/download/v2.10.0/ZAP_2.10.0_Crossplatform.zip
+#	[^] ZAP: https://github.com/zaproxy/zaproxy/releases/download/v2.11.1/ZAP_2.11.1_Crossplatform.zip
 #	[^] CrackMapExec: https://github.com/byt3bl33d3r/CrackMapExec
 #	[^] Impacket: https://github.com/SecureAuthCorp/impacket/
 #	[^] PowerShell (pwsh): https://github.com/PowerShell/PowerShell/releases/
+#	[^] SMBMap: https://github.com/ShawnDEvans/smbmap
+
 
 ###################################################################################################################
 FROM base AS kraken-exploitation
@@ -413,11 +433,13 @@ FROM base AS kraken-exploitation
 	#Copy resources to EXPLOITATION directory.
 	COPY data/README-exploitation.txt ${WORKDIR_EXPLOITATION}
 
-	RUN if [ "$EXPLOITATION_BURP" = "True" ] ; then cd ${WORKDIR_EXPLOITATION} && mkdir Burp && cd Burp && curl -L https://portswigger.net/burp/releases/download?product=community&version=2020.12.1&type=Jar; fi ; \
-		if [ "$EXPLOITATION_ZAP" = "True" ] ; then cd ${WORKDIR_EXPLOITATION} && wget https://github.com/zaproxy/zaproxy/releases/download/v2.10.0/ZAP_2.10.0_Crossplatform.zip && unzip ZAP_2.10.0_Crossplatform.zip && rm -rf ZAP_2.10.0_Crossplatform.zip fi ; \
-		if [ "$EXPLOITATION_CRACKMAPEXEC" = "True" ] ; then cd ${WORKDIR_EXPLOITATION} && wget https://github.com/byt3bl33d3r/CrackMapExec/releases/download/v5.1.1dev/cme-ubuntu-latest.4.zip && unzip cme-ubuntu-latest.4.zip && rm -rf cme-ubuntu-latest.4.zip; fi ; \
+	RUN if [ "$EXPLOITATION_BURP" = "True" ] ; then cd ${WORKDIR_EXPLOITATION} && mkdir Burp && cd Burp && curl "https://portswigger.net/burp/releases/download?product=community&type=Jar" --output Burp-latest.jar ; fi ; \
+		if [ "$EXPLOITATION_ZAP" = "True" ] ; then cd ${WORKDIR_EXPLOITATION} && curl "https://github.com/zaproxy/zaproxy/releases/download/v2.11.1/ZAP_2.11.1_Crossplatform.zip" --output ZAP_2.10.0_Crossplatform.zip ; fi ; \
+		if [ "$EXPLOITATION_CRACKMAPEXEC" = "True" ] ; then cd ${WORKDIR_EXPLOITATION} && wget https://github.com/Porchetta-Industries/CrackMapExec/releases/download/v5.3.0/cme-ubuntu-latest-3.10.zip && unzip cme-ubuntu-latest-3.10.zip && rm -rf cme-ubuntu-latest-3.10.zip; fi ; \
 		if [ "$EXPLOITATION_IMPACKET" = "True" ] ; then cd ${WORKDIR_EXPLOITATION} && git clone https://github.com/SecureAuthCorp/impacket impacket; fi ; \
-		if [ "$EXPLOITATION_POWERSHELL" = "True" ] ; then cd ${WORKDIR_EXPLOITATION} && curl -L  https://github.com/PowerShell/PowerShell/releases/download/v7.1.0/powershell-7.1.0-linux-x64.tar.gz -o /tmp/powershell.tar.gz && mkdir -p powershell/7 && tar zxf /tmp/powershell.tar.gz -C powershell/7 && chmod +x powershell/7/pwsh && ln -s ${WORKDIR_EXPLOITATION}/powershell/7/pwsh /usr/bin/pwsh; fi ; 
+		if [ "$EXPLOITATION_SMBMAP" = "True" ] ; then cd ${WORKDIR_EXPLOITATION} && git clone https://github.com/ShawnDEvans/smbmap smbmap; fi ; \
+		if [ "$EXPLOITATION_POWERSHELL" = "True" ] ; then cd ${WORKDIR_EXPLOITATION} && curl -L  https://github.com/PowerShell/PowerShell/releases/download/v7.1.0/powershell-7.1.0-linux-x64.tar.gz -o /tmp/powershell.tar.gz && mkdir -p powershell/7 && tar zxf /tmp/powershell.tar.gz -C powershell/7 && chmod +x powershell/7/pwsh && ln -s ${WORKDIR_EXPLOITATION}/powershell/7/pwsh /usr/bin/pwsh; fi ;
+
 
 ###################################################################################################################
 # ESCALATION PRIVILEGES 																							          
@@ -517,14 +539,11 @@ FROM base AS kraken-exfiltration
 ###################################################################################################################
 # FRAMEWORK IMAGE 																							          
 # DESCRIPTION:																									  
-# Include the tools for the Weaponization stage.						 								  
+# Include the tools for the frameworks stage.						 								  
 # TOOLS:
-#	[^] CVE-2018-20250: https://github.com/WyAtu/CVE-2018-20250
-#	[^] CVE-2017-8759: https://github.com/bhdresh/CVE-2017-8759 
-#	[^] CVE-2017-8570: https://github.com/rxwx/CVE-2017-8570
-#	[^] CVE-2017-0199: https://github.com/bhdresh/CVE-2017-0199
-#	[^] Demiguise: https://github.com/nccgroup/demiguise
-#	[^] EmbedInHTML; https://github.com/Arno0x/EmbedInHTML
+#	[^] Metasploit Framework: https://github.com/rapid7/metasploit-framework.git
+#	[^] Beef: https://github.com/beefproject/beef 
+#	[^] BetterCap: https://github.com/bettercap/bettercap.git
 ###################################################################################################################
 FROM base AS kraken-framework
 	LABEL author="Adastra"
@@ -548,6 +567,7 @@ FROM base AS kraken-framework
 #	[^] FuzzDB: https://github.com/fuzzdb-project/fuzzdb
 #	[^] DirBuster: https://github.com/Adastra-thw/DirBuster-1.0
 #	[^] Hash-Identifier: https://github.com/blackploit/hash-identifier
+#	[^] SSLH: https://github.com/yrutschle/sslh
 ###################################################################################################################
 FROM base AS kraken-common
 	LABEL author="Adastra"
@@ -560,6 +580,7 @@ FROM base AS kraken-common
 		if [ "$COMMON_POSTMAN" = "True" ] ; then cd ${WORKDIR_COMMON} && wget https://dl.pstmn.io/download/latest/linux64 -O Postman.tar.gz && tar -xvf Postman.tar.gz && rm -rf Postman.tar.gz ; fi ; \
 		if [ "$COMMON_FUZZDB" = "True" ] ; then cd ${WORKDIR_COMMON} && git clone https://github.com/fuzzdb-project/fuzzdb.git ; fi ; \
 		if [ "$COMMON_DIRBUSTER" = "True" ] ; then cd ${WORKDIR_COMMON} && git clone https://github.com/Adastra-thw/DirBuster-1.0 DirBuster && cd DirBuster && tar -xvf DirBuster-1.0-RC1.tar.bz2 && rm -rf DirBuster-1.0-RC1.tar.bz2 ; fi ; \
+		if [ "$COMMON_SSLH" = "True" ] ; then cd ${WORKDIR_COMMON} && git clone https://github.com/yrutschle/sslh && cd sslh && make install ; fi ; \
 		if [ "$COMMON_HASHIDENTIFIER" = "True" ] ; then cd ${WORKDIR_COMMON} && git clone https://github.com/blackploit/hash-identifier Hash-Identifier ; fi ;
 
 ###################################################################################################################
@@ -601,16 +622,17 @@ FROM base as kraken-composition
 	RUN if [ "$RECON_RECONNG" = "True" ] ; then cd ${WORKDIR_RECON}/recon-ng && pip3 install -r REQUIREMENTS; fi ; \
 		if [ "$RECON_PHOTON" = "True" ] ; then cd ${WORKDIR_RECON}/Photon && pip3 install -r requirements.txt ; fi ; \
 		if [ "$RECON_THEHARVESTER" = "True" ] ; then cd ${WORKDIR_RECON}/theHarvester && pip3 install -r requirements/base.txt ; fi ; \
-		if [ "$RECON_JUSTMETADATA" = "True" ] ; then cd ${WORKDIR_RECON}/Just-Metadata/setup && ./setup.sh ; fi ; \
-		if [ "$RECON_SKIPTRACER" = "True" ] ; then cd ${WORKDIR_RECON}/skiptracer && pip install -r requirements.txt ; fi ; \
 		if [ "$RECON_SPIDERFOOT" = "True" ] ; then cd ${WORKDIR_RECON}/spiderfoot &&  pip3 install -r requirements.txt ; fi ; \
+		if [ "$RECON_SHERLOCK" = "True" ] ; then cd ${WORKDIR_RECON}/sherlock &&  pip3 install -r requirements.txt ; fi ; \
 		if [ "$RECON_NMAP" = "True" ] ; then cd ${WORKDIR_RECON}/nmap && ./configure && make && make install; fi
 
 	#Programs and dependencies for WEAPON.
 	#Programs and dependencies for DELIVERY.
 	#Programs and dependencies for EXPLOITATION.
-	RUN	if [ "$EXPLOITATION_IMPACKET" = "True" ] ; then cd ${WORKDIR_EXPLOITATION}/impacket && pip3 install requirements.txt ; fi ; \
-		if [ "$EXPLOITATION_POWERSHELL" = "True" ] ; then cd ${WORKDIR_EXPLOITATION}/powershell/7 && apt-get install -y less locales ca-certificates libicu63 libssl1.1 libc6 libgcc1 libgssapi-krb5-2 liblttng-ust0 libstdc++6
+	RUN	if [ "$EXPLOITATION_IMPACKET" = "True" ] ; then cd ${WORKDIR_EXPLOITATION}/impacket && pip3 install -r requirements.txt ; fi ; \
+		if [ "$EXPLOITATION_SMBMAP" = "True" ] ; then cd ${WORKDIR_EXPLOITATION}/smbmap && pip3 install -r requirements.txt ; fi ; \
+		if [ "$EXPLOITATION_POWERSHELL" = "True" ] ; then cd ${WORKDIR_EXPLOITATION}/powershell/7 && wget http://ftp.es.debian.org/debian/pool/main/i/icu/libicu63_63.1-6+deb10u3_amd64.deb && apt install ./libicu63_63.1-6+deb10u3_amd64.deb && rm libicu63_63.1-6+deb10u3_amd64.deb && apt-get install -y less locales ca-certificates libssl1.1 libc6 libgcc1 libgssapi-krb5-2 liblttng-ust0 libstdc++6 ; fi ;
+
 
 	#Programs and dependencies for ESCALATION.
 	#Programs and dependencies for COMMANDANDCONTROL.

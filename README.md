@@ -46,24 +46,26 @@ If you want to build an image downloaded from this repository:
 Build the image only with tools for anonimity.
 
 **`cd  <KRAKENRDI_ROOT_DIR>/core/docker`**
-**`docker build -t adastra/KrakenRDI:anon -f Dockerfile-anon .`**
+**`docker build -t adastra/krakenrdi:anon -f Dockerfile-anon .`**
 
 Build the image only with tools for recon.
-**`# cd  <KRAKENRDI_ROOT_DIR>/core/docker`**
+**`cd  <KRAKENRDI_ROOT_DIR>/core/docker`**
 
-**`# docker build -t adastra/KrakenRDI:recon -f Dockerfile-recon .`**
+**`docker build -t adastra/krakenrdi:recon -f Dockerfile-recon .`**
 
 Build the image with specified tools (all of them updated): NMAP, SpiderFoot, MaliciousMacroGenerator, Demiguise.
-**`# cd  <KRAKENRDI_ROOT_DIR>/core/docker`**
+**`cd  <KRAKENRDI_ROOT_DIR>/core/docker`**
 
-**`# docker build -f Dockerfile-base -t adastraa/krakenrdi:base --build-arg RECON_NMAP=True --build-arg RECON_SPIDERFOOT=True --build-arg WEAPON_MALICIOUSMACROGENERATOR=True --build-arg WEAPON_DEMIGUISE=True .`**
+**`docker build -f Dockerfile-base -t adastraa/krakenrdi:base --build-arg RECON_NMAP=True --build-arg RECON_SPIDERFOOT=True --build-arg WEAPON_MALICIOUSMACROGENERATOR=True --build-arg WEAPON_DEMIGUISE=True .`**
 
 > **NOTE:**  The file **Dockerfile-base** could be useful to create a image with the specified tools. However, if you don't specify that tools it just create a Debian image as base **without any tool.**
 To see the full list of tools and the arg name see **Toolbox**
 
 ### Create containers
 
-Just use the image created previously
+Just use the image created. Example:
+
+**`docker run --name krakencontainer -it --rm adastraa/krakenrdi:base bash`**
 
 ## KrakenRDI Rest API and Platform Management
 
@@ -85,11 +87,13 @@ Tools in this section can be applied for general purposes and can be very useful
 
 |Tool name                |Website                          |KrakenRDI name|Scope 
 |----------------|-------------------------------|-----------------------------|----------------------------|
-|THC Hydra|`https://github.com/vanhauser-thc/thc-hydra.git`            |THC_HYDRA            |common            |
-|CeWL|`https://github.com/digininja/CeWL`            |CeWL            |common            |
-|Postman|`https://dl.pstmn.io/download/latest/linux64`            |Postman            |common            |
-|FuzzDB|`https://github.com/fuzzdb-project/fuzzdb.git`            |FuzzDB            |common            |
-|DirBuster|`https://github.com/Adastra-thw/DirBuster-1.0`            |DirBuster            |common            |
+|THC Hydra|`https://github.com/vanhauser-thc/thc-hydra.git`            |COMMON_THC_HYDRA            |common            |
+|CeWL|`https://github.com/digininja/CeWL`            |COMMON_CWEL            |common            |
+|Postman|`https://dl.pstmn.io/download/latest/linux64`            |COMMON_POSTMAN            |common            |
+|FuzzDB|`https://github.com/fuzzdb-project/fuzzdb.git`            |COMMON_FUZZDB            |common            |
+|DirBuster|`https://github.com/Adastra-thw/DirBuster-1.0`            |COMMON_DIRBUSTER            |common            |
+|SSLH|`https://github.com/yrutschle/sslh`            |COMMON_SSLH            |common            |
+|HASHIDENTIFIER|`https://github.com/blackploit/hash-identifier`            |COMMON_HASHIDENTIFIER            |common         |
 
 ## Frameworks
 
@@ -97,9 +101,9 @@ Tools in this section include sets of modules that can be used in multiple stage
 
 |Tool name                |Website                          |KrakenRDI name|Scope 
 |----------------|-------------------------------|-----------------------------|----------------------------|
-|Metasploit Framework|`https://github.com/rapid7/metasploit-framework`            |MetasploitFramework            |frameworks            |
-|BeEF Browser Exploitation Framework|`https://github.com/beefproject/beef`            |BeEF            |frameworks            |
-|Bettercap|`https://github.com/bettercap/bettercap`            |Bettercap            |frameworks            |
+|Metasploit Framework|`https://github.com/rapid7/metasploit-framework`            |FRAMEWORK_METASPLOIT            |frameworks            |
+|BeEF Browser Exploitation Framework|`https://github.com/beefproject/beef`            |FRAMEWORK_BEEF            |frameworks            |
+|Bettercap|`https://github.com/bettercap/bettercap`            |FRAMEWORK_BETTERCAP            |frameworks            |
 
 ## Anon
 
@@ -107,10 +111,11 @@ Tools in this section helps to anonymize the interaction between the attacker an
 
 |Tool name                |Website                          |KrakenRDI name|Scope 
 |----------------|-------------------------------|-----------------------------|----------------------------|
-|The Onion Router (from APT install)|`https://dist.torproject.org/`            |TOR - From Debian repository            |anon   |
-|The Onion Router (from source code install)|`https://dist.torproject.org/`            |TOR - From source code            |anon   |
-|TORSocks|`https://trac.torproject.org/projects/tor/wiki/doc/torsocks`            |TORSocks            |anon   |
-|ProxyChains|`https://github.com/rofl0r/proxychains-ng`            |ProxyChains-ng            |anon   |
+|The Onion Router (from APT install)|`https://dist.torproject.org/`            |ANON_TOR_APT            |anon   |
+|TORBrowser|`https://www.torproject.org/dist/torbrowser/`            |ANON_TOR_APT            |anon   |
+|The Onion Router (from source code install)|`https://dist.torproject.org/`            |ANON_TOR_SOURCE            |anon   |
+|TORSocks|`https://trac.torproject.org/projects/tor/wiki/doc/torsocks`            |ANON_TORSOCKS            |anon   |
+|ProxyChains|`https://github.com/rofl0r/proxychains-ng`            |ANON_PROXYCHAINS            |anon   |
 
 ## Recon
 
@@ -118,15 +123,15 @@ Tools in this section helps in reconnaissance stage of a RT campaign or a pentes
 
 |Tool name                |Website                          |KrakenRDI name|Scope 
 |----------------|-------------------------------|-----------------------------|----------------------------|
-|Recon-NG|`https://github.com/lanmaster53/recon-ng`            |Recon-NG            |recon  |
-|Photon|`https://github.com/s0md3v/Photon`            |Photon            |recon  |
-|The Harvester|`https://github.com/laramies/theHarvester`            |theHarvester            |recon  |
-|SkipTracer|`https://github.com/xillwillx/skiptracer`            |SkipTracer            |recon  |
-|Metagoofil|`https://github.com/laramies/metagoofil`            |Metagoofil            |recon  |
-|JustMetadata|`https://github.com/FortyNorthSecurity/Just-Metadata`            |JustMetadata            |recon  |
-|SpiderFoot|`https://github.com/smicallef/spiderfoot`            |SpiderFoot            |recon  |
-|Maltego CE|`https://www.maltego.com`            |Maltego            |recon  |
-|Network Mapper (Nmap)|`https://github.com/nmap/nmap`            |Nmap            |recon  |
+|Recon-NG|`https://github.com/lanmaster53/recon-ng`            |RECON_RECONNG            |recon  |
+|Photon|`https://github.com/s0md3v/Photon`            |RECON_PHOTON            |recon  |
+|The Harvester|`https://github.com/laramies/theHarvester`            |RECON_THEHARVESTER            |recon  |
+|Metagoofil|`https://github.com/laramies/metagoofil`            |RECON_METAGOOFIL            |recon  |
+|SpiderFoot|`https://github.com/smicallef/spiderfoot`            |RECON_SPIDERFOOT            |recon  |
+|Sherlock|`https://github.com/sherlock-project/sherlock`            |RECON_SHERLOCK            |recon  |
+|Maltego CE|`https://www.maltego.com`            |RECON_MALTEGO            |recon  |
+|Network Mapper (Nmap)|`https://github.com/nmap/nmap`            |RECON_NMAP            |recon  |
+|PhoneInfoga|`https://github.com/sundowndev/phoneinfoga/`            |RECON_PHONEINFOGA            |recon  |
 
 ## Weaponization
 
@@ -134,16 +139,18 @@ Tools in this section helps in weaponization stage of a RT campaign.
 
 |Tool name                |Website                          |KrakenRDI name|Scope 
 |----------------|-------------------------------|-----------------------------|----------------------------|
-|CVE2018_20250|`https://github.com/WyAtu/CVE-2018-20250`            |CVE2018_20250            |weaponization  |
-|CVE2017_8759|`https://github.com/bhdresh/CVE-2017-8759`            |CVE2017_8759            |weaponization  |
-|CVE2017_8570|`https://github.com/rxwx/CVE-2017-8570`            |CVE2017_8570            |weaponization  |
-|CVE2017_0199|`https://github.com/bhdresh/CVE-2017-0199`            |CVE2017_0199            |weaponization  |
-|DEMIGUISE|`https://github.com/nccgroup/demiguise`            |DEMIGUISE            |weaponization  |
-|MALICIOUS MACRO GENERATOR|`https://github.com/Mr-Un1k0d3r/MaliciousMacroGenerator`            |MALICIOUSMACROGENERATOR            |weaponization  |
-|OFFICEDDEPAYLOADS|`https://github.com/0xdeadbeefJERKY/Office-DDE-Payloads`            |OFFICEDDEPAYLOADS            |weaponization  |
-|DONT KILL MY CAT|`https://github.com/Mr-Un1k0d3r/DKMC`            |DONTKILLMYCAT(DKMC)            |weaponization  |
-|EMBEDINHTML|`https://github.com/Arno0x/EmbedInHTML`            |EMBEDINHTML            |weaponization  |
-|MACRO PACK|`https://github.com/sevagas/macro_pack`            |MACRO_PACK            |weaponization  |
+|CVE2018_20250|`https://github.com/WyAtu/CVE-2018-20250`            |WEAPON_CVE2018_20250            |weaponization  |
+|CVE2017_8759|`https://github.com/bhdresh/CVE-2017-8759`            |WEAPON_CVE2017_8759            |weaponization  |
+|CVE2017_8570|`https://github.com/rxwx/CVE-2017-8570`            |WEAPON_CVE2017_8570            |weaponization  |
+|CVE2017_0199|`https://github.com/bhdresh/CVE-2017-0199`            |WEAPON_CVE2017_0199            |weaponization  |
+|DEMIGUISE|`https://github.com/nccgroup/demiguise`            |WEAPON_DEMIGUISE            |weaponization  |
+|MALICIOUS MACRO GENERATOR|`https://github.com/Mr-Un1k0d3r/MaliciousMacroGenerator`            |WEAPON_MALICIOUSMACROGENERATOR            |weaponization  |
+|OFFICEDDEPAYLOADS|`https://github.com/0xdeadbeefJERKY/Office-DDE-Payloads`            |WEAPON_OFFICEDDEPAYLOADS            |weaponization  |
+|DONT KILL MY CAT|`https://github.com/Mr-Un1k0d3r/DKMC`            |WEAPON_DONTKILLMYCAT(DKMC)            |weaponization  |
+|EMBEDINHTML|`https://github.com/Arno0x/EmbedInHTML`            |WEAPON_EMBEDINHTML            |weaponization  |
+|MACRO PACK|`https://github.com/sevagas/macro_pack`            |WEAPON_MACRO_PACK            |weaponization  |
+|NTLM THEFT|`https://github.com/Greenwolf/ntlm_theft`            |WEAPON_NTLM_THEFT            |weaponization  |
+|FOLLINA|`https://github.com/chvancooten/follina.py`            |WEAPON_CVE2022_30190            |weaponization  |
 
 ## Exploitation
 
@@ -151,11 +158,12 @@ Tools in this section helps in exploitation stage of a RT campaign or a pentest 
 
 |Tool name                |Website                          |KrakenRDI name|Scope 
 |----------------|-------------------------------|-----------------------------|----------------------------|
-|Burp|`https://portswigger.net/burp`            |Burp            |exploitation  |
-|ZAP|`https://github.com/zaproxy/zaproxy`            |ZAP            |exploitation  |
-|CrackMapExec (CME) |`https://github.com/byt3bl33d3r/CrackMapExec`            |CrackMapExec            |exploitation  |
-|Impacket|`https://github.com/SecureAuthCorp/impacket/`            |Impacket            |exploitation  |
-|Powershell|`https://github.com/PowerShell/PowerShell/releases`            |Powershell            |exploitation  |
+|Burp|`https://portswigger.net/burp`            |EXPLOITATION_BURP            |exploitation  |
+|ZAP|`https://github.com/zaproxy/zaproxy`            |EXPLOITATION_ZAP            |exploitation  |
+|CrackMapExec (CME) |`https://github.com/byt3bl33d3r/CrackMapExec`            |EXPLOITATION_CRACKMAPEXEC            |exploitation  |
+|Impacket|`https://github.com/SecureAuthCorp/impacket/`            |EXPLOITATION_IMPACKET            |exploitation  |
+|SMBMap|`https://github.com/ShawnDEvans/smbmap/`            |EXPLOITATION_SMBMAP            |exploitation  |
+|Powershell|`https://github.com/PowerShell/PowerShell/releases`            |EXPLOITATION_POWERSHELL            |exploitation  |
 
 ## Privilege Escalation
 
@@ -163,14 +171,14 @@ Tools in this section helps in privilege escalation stage of a RT campaign or a 
 
 |Tool name                |Website                          |KrakenRDI name|Scope 
 |----------------|-------------------------------|-----------------------------|----------------------------|
-|BeRoot|`https://github.com/AlessandroZ/BeRoot.git`            |BeRoot            |escalation  |
-|LinEnum|`https://github.com/rebootuser/LinEnum`            |LinEnum            |escalation  |
-|Linux_Exploit_Suggester|`https://github.com/InteliSecureLabs/Linux_Exploit_Suggester`            |Linux_Exploit_Suggester            |escalation  |
-|linuxprivchecker|`https://github.com/sleventyeleven/linuxprivchecker`            |linuxprivchecker            |escalation  |
-|linux-smart-enumeration|`https://github.com/diego-treitos/linux-smart-enumeration`            |linux-smart-enumeration            |escalation  |
-|JAWS|`https://github.com/411Hall/JAWS`            |JAWS            |escalation  |
-|WESNG|`https://github.com/bitsadmin/wesng`            |WESNG            |escalation  |
-|Windows-Enum|`https://github.com/absolomb/WindowsEnum`            |Windows-Enum            |escalation  |
+|BeRoot|`https://github.com/AlessandroZ/BeRoot.git`            |ESCALATION_BEROOT            |escalation  |
+|LinEnum|`https://github.com/rebootuser/LinEnum`            |ESCALATION_LINENUM            |escalation  |
+|Linux_Exploit_Suggester|`https://github.com/InteliSecureLabs/Linux_Exploit_Suggester`            |ESCALATION_LINUX_EXPLOIT_SUGGESTER            |escalation  |
+|linuxprivchecker|`https://github.com/sleventyeleven/linuxprivchecker`            |ESCALATION_LINUX_PRIV_CHECKER            |escalation  |
+|linux-smart-enumeration|`https://github.com/diego-treitos/linux-smart-enumeration`            |ESCALATION_LINUX_SMART_ENUMERATION            |escalation  |
+|JAWS|`https://github.com/411Hall/JAWS`            |ESCALATION_JAWS            |escalation  |
+|WESNG|`https://github.com/bitsadmin/wesng`            |ESCALATION_WESNG            |escalation  |
+|Windows-Enum|`https://github.com/absolomb/WindowsEnum`            |ESCALATION_WINDOWSENUM            |escalation  |
 
 ## Exfiltration
 
@@ -178,7 +186,7 @@ Tools in this section helps in exfiltration stage of a RT campaign. Useful to ge
 
 |Tool name                |Website                          |KrakenRDI name|Scope 
 |----------------|-------------------------------|-----------------------------|----------------------------|
-|MISTICA|`https://github.com/IncideDigital/Mistica`            |MISTICA            |exfiltration  |
+|MISTICA|`https://github.com/IncideDigital/Mistica`            |EXFILTRATION_MISTICA            |exfiltration  |
 
 # Demo videos
 

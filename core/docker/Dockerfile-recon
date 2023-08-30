@@ -51,23 +51,21 @@ FROM debian:${VERSION} AS base
 	ARG RECON_RECONNG=True
 	ARG RECON_PHOTON=True
 	ARG RECON_THEHARVESTER=True
-	ARG RECON_SKIPTRACER=True
 	ARG RECON_METAGOOFIL=True
-	ARG RECON_JUSTMETADATA=True
 	ARG RECON_SPIDERFOOT=True
-	ARG RECON_MALTEGO=False
+	ARG RECON_MALTEGO=True
 	ARG RECON_PHONEINFOGA=True
+	ARG RECON_SHERLOCK=True
 	ARG RECON_NMAP=True
 
 	ENV RECON_RECONNG $RECON_RECONNG
 	ENV RECON_PHOTON $RECON_PHOTON
 	ENV RECON_THEHARVESTER $RECON_THEHARVESTER
-	ENV RECON_SKIPTRACER $RECON_SKIPTRACER
 	ENV RECON_METAGOOFIL $RECON_METAGOOFIL
-	ENV RECON_JUSTMETADATA $RECON_JUSTMETADATA
 	ENV RECON_SPIDERFOOT $RECON_SPIDERFOOT
 	ENV RECON_MALTEGO $RECON_MALTEGO
 	ENV RECON_PHONEINFOGA $RECON_PHONEINFOGA
+	ENV RECON_SHERLOCK $RECON_SHERLOCK
 	ENV RECON_NMAP $RECON_NMAP
 
 	########################################
@@ -75,14 +73,14 @@ FROM debian:${VERSION} AS base
 	########################################
 	RUN apt-get update && apt-get -y install net-tools netcat socat nano locate \
 		python3 python3-dev python3-pip \
-		python python-dev python-pip \
+		python python-dev \
 		unzip wget curl git gcc libc-dev libxslt-dev \
 		openjdk-11-jre openjdk-11-jdk \
 		libevent-dev libssl-dev zlib1g zlib1g-dev \
 		firefox-esr xfce4-terminal \
 		autoconf automake libtool apt-utils \
 		openssh-server openssl \
-		build-essential libpcap-dev libpq-dev libsqlite3-dev libsqlite3-0 \
+		build-essential libpcap-dev libpq-dev libsqlite3-dev \
 		software-properties-common sudo locate \
 		&& useradd -m ${USERNAME} \
 		&& echo "${USERNAME}:${PASSWORD}" | chpasswd \
@@ -93,15 +91,14 @@ FROM debian:${VERSION} AS base
 # DESCRIPTION:																									  
 # Include the tools for the Intelligence gathering stage.						 								  
 # TOOLS:																										  
-#	[^]	Recon-ng: https://github.com/lanmaster53/recon-ng 														  
-#	[^] Photon: https://github.com/s0md3v/Photon  																  
-#	[^] skiptracer: https://github.com/xillwillx/skiptracer	        											  
-#	[^] theHarvester: https://github.com/laramies/theHarvester 													  
-#	[^] metagoofil: https://github.com/laramies/metagoofil 														  
-#	[^] JustMetadata: https://github.com/FortyNorthSecurity/Just-Metadata 										  	
-#	[^] Maltego: https://www.paterva.com/web7/downloads.php 														  
-#	[^] Spiderfoot: https://github.com/smicallef/spiderfoot
-#	[^] Nmap: https://github.com/nmap/nmap.git								  
+#	[^]	Recon-ng: https://github.com/lanmaster53/recon-ng
+#	[^] Photon: https://github.com/s0md3v/Photon
+#	[^] theHarvester: https://github.com/laramies/theHarvester
+#	[^] metagoofil: https://github.com/laramies/metagoofil
+#	[^] Maltego: https://www.paterva.com/web7/downloads.php 			#	[^] Spiderfoot: https://github.com/smicallef/spiderfoot
+#	[^] Nmap: https://github.com/nmap/nmap.git
+#	[^] Sherlock: https://github.com/sherlock-project/sherlock.git
+
 ###################################################################################################################
 FROM base AS kraken-recon
 	LABEL author="Adastra"
@@ -114,12 +111,11 @@ FROM base AS kraken-recon
 	RUN if [ "$RECON_RECONNG" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/lanmaster53/recon-ng.git ; fi ; \
 		if [ "$RECON_PHOTON" = "True" ] ; then cd ${WORKDIR_RECON} &&  git clone https://github.com/s0md3v/Photon ; fi ; \
 		if [ "$RECON_THEHARVESTER" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/laramies/theHarvester ; fi ; \
-		if [ "$RECON_SKIPTRACER" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/xillwillx/skiptracer.git ; fi ; \
 		if [ "$RECON_METAGOOFIL" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/laramies/metagoofil ; fi ; \
-		if [ "$RECON_JUSTMETADATA" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/FortyNorthSecurity/Just-Metadata.git && cd Just-Metadata/setup && ./setup.sh ; fi ; \
 		if [ "$RECON_SPIDERFOOT" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/smicallef/spiderfoot.git ; fi ; \
-		if [ "$RECON_MALTEGO" = "True" ] ; then cd ${WORKDIR_RECON} && mkdir maltego && cd maltego && wget https://maltego-downloads.s3.us-east-2.amazonaws.com/linux/Maltego.v4.2.9.12898.linux.zip && unzip Maltego.v4.2.9.12898.linux.zip ; fi ; \
+		if [ "$RECON_MALTEGO" = "True" ] ; then cd ${WORKDIR_RECON} && mkdir maltego && cd maltego && wget https://maltego-downloads.s3.us-east-2.amazonaws.com/linux/Maltego.v4.3.0.linux.zip && unzip Maltego.v4.3.0.linux.zip ; fi ; \
 		if [ "$RECON_PHONEINFOGA" = "True" ] ; then cd ${WORKDIR_RECON} && mkdir phoneinfoga && cd phoneinfoga && curl -L "https://github.com/sundowndev/phoneinfoga/releases/download/v2.0.5/phoneinfoga_$(uname -s)_$(uname -m).tar.gz" -o phoneinfoga.tar.gz && tar xvf phoneinfoga.tar.gz && rm -rf phoneinfoga.tar.gz; fi ; \
+		if [ "$RECON_SHERLOCK" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/sherlock-project/sherlock ; fi ; \
 		if [ "$RECON_NMAP" = "True" ] ; then cd ${WORKDIR_RECON} && git clone https://github.com/nmap/nmap.git; fi
 
 ###################################################################################################################
@@ -137,16 +133,14 @@ FROM base as kraken-composition
 	RUN if [ "$RECON_RECONNG" = "True" ] ; then cd ${WORKDIR_RECON}/recon-ng && pip3 install -r REQUIREMENTS; fi ; \
 		if [ "$RECON_PHOTON" = "True" ] ; then cd ${WORKDIR_RECON}/Photon && pip3 install -r requirements.txt ; fi ; \
 		if [ "$RECON_THEHARVESTER" = "True" ] ; then cd ${WORKDIR_RECON}/theHarvester && pip3 install -r requirements/base.txt ; fi ; \
-		if [ "$RECON_JUSTMETADATA" = "True" ] ; then cd ${WORKDIR_RECON}/Just-Metadata/setup && ./setup.sh ; fi ; \
-		if [ "$RECON_SKIPTRACER" = "True" ] ; then cd ${WORKDIR_RECON}/skiptracer && pip install -r requirements.txt ; fi ; \
 		if [ "$RECON_SPIDERFOOT" = "True" ] ; then cd ${WORKDIR_RECON}/spiderfoot &&  pip3 install -r requirements.txt ; fi ; \
+		if [ "$RECON_SHERLOCK" = "True" ] ; then cd ${WORKDIR_RECON}/sherlock &&  pip3 install -r requirements.txt ; fi ; \
 		if [ "$RECON_NMAP" = "True" ] ; then cd ${WORKDIR_RECON}/nmap && ./configure && make && make install; fi
 
 ###################################################################################################################
 # OUTPUT LAYER 																							          
 # DESCRIPTION:																									  
-# The final instructions before create the container. In this layer Docker will clean temporary files, 
-# change the user, expose the defined ports and keeps the container up and running.										  
+# The final instructions before create the container. In this layer Docker will clean temporary files, change the user, expose the defined ports and keeps the container up and running.										  
 ###################################################################################################################
 FROM kraken-composition
 	USER root
