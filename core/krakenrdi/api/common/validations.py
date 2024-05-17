@@ -1,53 +1,55 @@
 import json
-from jsonschema.exceptions import ValidationError
-from jsonschema import validate
-from core.krakenrdi.api.common.schemas import createBuildSchema, deleteBuildSchema, detailBuildSchema, createContainerSchema, deleteContainerSchema, stopContainerSchema, getContainerSchema, infoToolSchema, filterToolSchema
-from core.krakenrdi.api.common.schemas import defaultsBuild, defaultsContainer, defaultsTool              
+import re
+import logging
+from os import environ
+from jsonschema import validate, ValidationError
+from core.krakenrdi.api.common.schemas import (
+    createBuildSchema, deleteBuildSchema, detailBuildSchema, createContainerSchema,
+    deleteContainerSchema, stopContainerSchema, getContainerSchema, infoToolSchema, filterToolSchema
+)
+from core.krakenrdi.api.common.schemas import defaultsBuild, defaultsContainer, defaultsTool
 
+# Setup logging
+logging.basicConfig(filename='core/logs/krakenrdi.log', level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-'''
-    Set the default values for the not mandatory attributes in JSON structures.
-'''
 def __setDefaults(jsonRequest, typeStructure):
     for attribute in typeStructure.keys():
         if attribute not in jsonRequest.keys():
-            jsonRequest[attribute] = typeStructure[attribute] 
-    return jsonRequest 
+            jsonRequest[attribute] = typeStructure[attribute]
+    return jsonRequest
 
 def setDefaultsBuild(request):
-    structure = __setDefaults(request, defaultsBuild)
-    return structure
+    return __setDefaults(request, defaultsBuild)
 
 def setDefaultsContainer(request):
-    structure = __setDefaults(request, defaultsContainer)
-    return structure
+    return __setDefaults(request, defaultsContainer)
 
 def setDefaultsTool(request):
-    structure = __setDefaults(request, defaultsTool)
-    return structure
+    return __setDefaults(request, defaultsTool)
 
-'''
-Validation of the JSON structure using the JSON Schema to create builds.
-'''
 def validateApiRequest(request, abort, schema):
-    schemas = {"createBuild": createBuildSchema, 
-               "detailBuild": detailBuildSchema, 
-               "deleteBuild": deleteBuildSchema, 
-               "createContainer": createContainerSchema,
-               "deleteContainer": deleteContainerSchema,
-               "stopContainer": stopContainerSchema,
-               "getContainer": getContainerSchema, 
-               "infoToolSchema": infoToolSchema,
-               "filterToolSchema": filterToolSchema
-               }
-    if request.is_json is False:
-        abort(400)
-    if schema not in schemas.keys():
-        abort(400)
+    schemas = {
+        "createBuild": createBuildSchema,
+        "detailBuild": detailBuildSchema,
+        "deleteBuild": deleteBuildSchema,
+        "createContainer": createContainerSchema,
+        "deleteContainer": deleteContainerSchema,
+        "stopContainer": stopContainerSchema,
+        "getContainer": getContainerSchema,
+        "infoToolSchema": infoToolSchema,
+        "filterToolSchema": filterToolSchema
+    }
+    
+    if not request.is_json:
+        abort(400, "Invalid request: Content-Type must be application/json")
+    if schema not in schemas:
+        abort(400, "Invalid request: Unknown schema")
+    
     try:
         validate(instance=request.json, schema=schemas[schema])
     except ValidationError as err:
-        print(err._word_for_schema_in_error_message)
+        logger.warning(f"Validation error: {err}")
         abort(400, err.message)
     return True
 
@@ -59,106 +61,89 @@ class BusinessValidations:
         pass
 
     def validateContainerStructure(self, container):
-        containerStructure = {}
-        containerStructure["valid"] = False
-        #Validate build name. Check if the image exists in Docker service.
-        try:
-            self.dockerManager.imageBuilder.imageDockerObject.get(container["buildName"]) 
-        except:
-            containerStructure["message"] = "Image don't found"
+        containerStructure = {
+            "valid": False,
+            "message": ""
+        }
+        
+        if not self._validate_image_exists(container, containerStructure):
             return containerStructure
+        
+        if not self._validate_container_name(container, containerStructure):
+            return containerStructure
+        
+        containerStructure.update({
+            "buildName": container["buildName"],
+            "containerName": container.get("containerName"),
+            "volumes": self._validate_volumes(container),
+            "ports": self._validate_ports(container),
+            "environment": self._validate_environment(container),
+            "memoryLimit": self._validate_memory_limit(container),
+            "autoRemove": container.get("autoRemove"),
+            "capAdd": container.get("capAdd"),
+            "capDrop": container.get("capDrop"),
+            "hostname": container.get("hostname"),
+            "networkMode": container.get("networkMode"),
+            "privileged": container.get("privileged"),
+            "networkDisabled": container.get("networkDisabled"),
+            "readOnly": container.get("readOnly"),
+            "removeOnFinish": container.get("removeOnFinish"),
+            "valid": True
+        })
+        
+        return containerStructure
 
-        containerStructure["buildName"]=container["buildName"]
-        #Validate container name. Check if the container name is already Docker service.
+    def _validate_image_exists(self, container, containerStructure):
+        try:
+            self.dockerManager.imageBuilder.imageDockerObject.get(container["buildName"])
+        except:
+            containerStructure["message"] = "Image not found"
+            return False
+        return True
+
+    def _validate_container_name(self, container, containerStructure):
+        containerFound = None
         if "containerName" in container:
-            containerStructure["containerName"]=container["containerName"]
-            containerFound=None
             try:
-                containerFound = self.dockerManager.containerBuilder.containerDockerObject.get(container["containerName"]) 
+                containerFound = self.dockerManager.containerBuilder.containerDockerObject.get(container["containerName"])
             except:
-                #If the container is not found means that it could be created without problem.
-                #If there's no exception means the container already has beed created and should not continue with this process.
                 pass
+            
+            if containerFound:
+                if "removeIfExists" in container and container["removeIfExists"]:
+                    containerFound.stop(timeout=30)
+                    containerFound.remove()
+                else:
+                    containerStructure["message"] = f"Container {container['containerName']} already exists. Choose another name or set 'removeIfExists' to True."
+                    return False
+        return True
 
-            if "removeIfExists" in container and containerFound is not None:
-                containerFound.stop(timeout=30)
-                containerFound.remove()
-            elif containerFound is not None:
-                containerStructure["message"] = "Container "+container["containerName"]+" already exists. Choose another name or set the flag 'removeIfExists' to delete the container with that name and create yours."
-                return containerStructure
-
-        containerStructure["volumes"] = {}
-        containerStructure["ports"] = {}
-        containerStructure["environment"] = []
-
-        #Validate and create the appropiate structure.
-        if "ports" in container:
-            portStructure={}
-            for port in container["ports"]:
-                #The keys will be the ports inside container.
-                #The values will be the ports in the host machine.
-                portContainer = None
-                portHost = None
-
-                if "portContainer" in port:
-                    if "protocolContainer" not in port:
-                        port["protocolContainer"] = "/tcp"
-                    else:
-                        port["protocolContainer"] = "/"+port["protocolContainer"]
-                    portContainer = str(port["portContainer"])+port["protocolContainer"]
-
-                if "portHost" in port:                    
-                    if "protocolHost" not in port:
-                        port["protocolHost"] = "/tcp"
-                    else:
-                        port["protocolHost"] = "/"+port["protocolHost"]
-                    portHost = str(port["portHost"])+port["protocolHost"]
-
-                #This could be, for example:
-                #{"22/tcp": None} -- 22/tcp in container / Random in host.
-                #{"22/tcp": "2222/tcp"}  -- 22/tcp in container / 2222/tcp in host.
-                portStructure[portContainer] = portHost
-            containerStructure["ports"]=portStructure
-
+    def _validate_volumes(self, container):
+        volumes = {}
         if "volumes" in container:
-            #The keys will be the volume in the host machine.
-            #The values will be mount point inside the container.                
-            volumes={}
             for volume in container["volumes"]:
                 hostVolume = volume["hostVolume"]
-                containerVolume = {"bind": volume["containerVolume"], 
-                                    "mode": volume["modeVolume"]}
+                containerVolume = {"bind": volume["containerVolume"], "mode": volume["modeVolume"]}
                 volumes[hostVolume] = containerVolume
-            
-            #This could be, for example:
-            #{ '/home/user1/': {'bind': '/mnt/vol2', 'mode': 'rw'}, 
-            #  '/var/www': {'bind': '/mnt/vol1', 'mode': 'ro'}}
-            containerStructure["volumes"]=volumes
+        return volumes
 
-        #Validate the value of memory
-        import re
-        if "memoryLimit" in container:
-            match = re.compile('(\d*)(?:b|k|m|g|)').match(container["memoryLimit"])
-            if match:
-                containerStructure["memoryLimit"]=container["memoryLimit"]
-            else:
-                containerStructure["message"] =  "Invalid memory limit: "+container["memoryLimit"]+". Valid examples could be: 100000b, 1000k, 128m, 1g, etc."
+    def _validate_ports(self, container):
+        ports = {}
+        if "ports" in container:
+            for port in container["ports"]:
+                portContainer = f"{port['portContainer']}/{port.get('protocolContainer', 'tcp')}"
+                portHost = f"{port['portHost']}/{port.get('protocolHost', 'tcp')}" if "portHost" in port else None
+                ports[portContainer] = portHost
+        return ports
 
-        #Verify if X11 should be enabled.
-        if "enableX11" in container:
-            from os import environ
-            containerStructure["environment"].extend(["DISPLAY="+environ["DISPLAY"]]),
-            containerStructure["volumes"].update({'/tmp/.X11-unix/': {'bind': '/tmp/.X11-unix/', 'mode': 'rw'}})
-        #No special validations.
-        containerStructure["autoRemove"]= container["autoRemove"]
-        containerStructure["capAdd"]= container["capAdd"]
-        containerStructure["capDrop"]= container["capDrop"]
-        containerStructure["hostname"]=container["hostname"]
-        
-        containerStructure["networkMode"]=container["networkMode"]
-        containerStructure["privileged"]=container["privileged"]
-        containerStructure["networkDisabled"]=container["networkDisabled"]
-        containerStructure["readOnly"]=container["readOnly"]
-        containerStructure["removeOnFinish"]=container["removeOnFinish"]
-        containerStructure["valid"] = True
-        return containerStructure
+    def _validate_environment(self, container):
+        environment = container.get("environment", [])
+        if container.get("enableX11"):
+            environment.append(f"DISPLAY={environ['DISPLAY']}")
+        return environment
+
+    def _validate_memory_limit(self, container):
+        memory_limit = container.get("memoryLimit")
+        if memory_limit and not re.match(r'^\d+[bkmgt]$', memory_limit.lower()):
+            return f"Invalid memory limit: {memory_limit}. Valid examples are: 100000b, 1000k, 128m, 1g."
+        return memory_limit
