@@ -1,93 +1,69 @@
+import logging
+import json
+import os
+import jsonschema
+from flask import jsonify, request, abort, make_response
 from core.krakenrdi.server.CoreObjects import KrakenConfiguration
 from core.krakenrdi.server.krakenServer import KrakenServer
-
-from flask import jsonify
-from flask import request, abort
-from flask import make_response
-import json, os, jsonschema
 from core.krakenrdi.api.common.validations import validateApiRequest, setDefaultsTool
 from jsonpickle import encode
-from flask import jsonify
 
-class ToolView():
-	
-	'''
-	/tools/stages:
-				Methods: GET, POST
-				Request: {}
-				Description: List of stages for tools.
+# Setup logging
+logging.basicConfig(filename='core/logs/krakenrdi.log', level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-				Response:
-				{"toolStages" : ["common","framework","candc","delivery",
-						  				"escalation","exfiltration","exploitation",
-						  				"internalrecon","movelateral","recon","weapon","all"]
-				} 
+class ToolView:
 
-	'''
-	def stagesTools(self, requestJson):
-		pass
+    @staticmethod
+    @KrakenConfiguration.restApi.route('/tools/stages', methods=["GET", "POST"])
+    def stagesTools():
+        try:
+            response = {"toolStages": ["common", "framework", "candc", "delivery",
+                                       "escalation", "exfiltration", "exploitation",
+                                       "internalrecon", "movelateral", "recon", "weapon", "all"]}
+            return jsonify(response), 200
+        except Exception as e:
+            logger.error(f"Error retrieving tool stages: {e}")
+            return jsonify({'message': 'Internal server error'}), 500
 
-	@KrakenConfiguration.restApi.route('/tools/list', methods=["GET","POST"])
-	def listTools():
-		response = KrakenServer.toolService.list()
-		return jsonify(response)
+    @staticmethod
+    @KrakenConfiguration.restApi.route('/tools/list', methods=["GET", "POST"])
+    def listTools():
+        try:
+            response = KrakenServer.toolService.list()
+            return jsonify(response), 200
+        except Exception as e:
+            logger.error(f"Error listing tools: {e}")
+            return jsonify({'message': 'Internal server error'}), 500
 
+    @staticmethod
+    @KrakenConfiguration.restApi.route('/tools/info', methods=["POST"])
+    def infoTools():
+        try:
+            if validateApiRequest(request, abort, schema="infoToolSchema"):
+                structure = setDefaultsTool(request.json)
+                response = KrakenServer.toolService.info(structure)
+                return jsonify(response), 200
+            return jsonify({'message': 'Invalid request'}), 400
+        except jsonschema.ValidationError as e:
+            logger.warning(f"Validation error: {e}")
+            return jsonify({'message': 'Invalid request schema'}), 400
+        except Exception as e:
+            logger.error(f"Error getting tool info: {e}")
+            return jsonify({'message': 'Internal server error'}), 500
 
-	'''
-	/tools/info:
-				Methods: POST
-				Request: {"toolName" : "Tool's name"}
-				Description: Get basic information about one tool
-				Response:
-				{
-					"toolName": "Tool's name",
-					"toolDescription": "Tool's description",
-					"toolURL": "Tool's URL",
-					"toolScope" ["PT","RT"]
-				}
-	'''
-	@KrakenConfiguration.restApi.route('/tools/info', methods=["POST"])
-	def infoTools():
-		response = {}
-		if validateApiRequest(request, abort, schema="infoToolSchema"):
-			structure = setDefaultsTool(request.json)
-			response = KrakenServer.toolService.info(structure)
-		return jsonify(response)
-
-	'''
-	/tools/filter:
-				Methods: POST
-				Request: {"toolName" : "hydra",
-						  "toolStage" : ["common","framework","candc","delivery",
-						  				"escalation","exfiltration","exploitation",
-						  				"internalrecon","movelateral","recon","weapon","all"]
-						  }
-				Description: List of tools by scope and stage.
-
-				Response:
-				{	
-					"tools" {
-								[
-									{
-										"toolName": "Tool's name",
-										"toolDescription": "Tool's description",
-										"toolURL": "Tool's URL",
-										"toolScope" ["PT","RT"]
-									}, 
-									{	
-										"toolName": "Tool's name2",
-										"toolDescription": "Tool's description2",
-										"toolURL": "Tool's URL2",
-										"toolScope" ["PT","RT"]
-									}
-								]
-					}
-				}
-	'''
-	@KrakenConfiguration.restApi.route('/tools/filter', methods=["POST"])
-	def filterTools():
-		response = {}
-		if validateApiRequest(request, abort, schema="filterToolSchema"):
-			structure = setDefaultsTool(request.json)
-			response = KrakenServer.toolService.filter(structure)
-		return jsonify(response)
+    @staticmethod
+    @KrakenConfiguration.restApi.route('/tools/filter', methods=["POST"])
+    def filterTools():
+        try:
+            if validateApiRequest(request, abort, schema="filterToolSchema"):
+                structure = setDefaultsTool(request.json)
+                response = KrakenServer.toolService.filter(structure)
+                return jsonify(response), 200
+            return jsonify({'message': 'Invalid request'}), 400
+        except jsonschema.ValidationError as e:
+            logger.warning(f"Validation error: {e}")
+            return jsonify({'message': 'Invalid request schema'}), 400
+        except Exception as e:
+            logger.error(f"Error filtering tools: {e}")
+            return jsonify({'message': 'Internal server error'}), 500
